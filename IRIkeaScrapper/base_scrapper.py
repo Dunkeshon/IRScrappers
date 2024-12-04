@@ -1,5 +1,3 @@
-import zenrowsAPIkey
-from zenrows import ZenRowsClient
 from typing import Generator
 from dataclasses import dataclass
 
@@ -25,7 +23,6 @@ class BaseScraper:
 
 
     def __init__(self):
-        self.client = ZenRowsClient(zenrowsAPIkey.ZENROWS_API_KEY)
         self.scraper_name = type(self).__name__
 
         if not self.source:
