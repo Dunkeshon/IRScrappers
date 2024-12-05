@@ -1,37 +1,34 @@
 import pyterrier as pt
+import pandas as pd
 from pymongo import MongoClient
 
-# Initialize PyTerrier
-if not pt.started():
-    pt.init()
+if not pt.java.started():
+    pt.java.init()
 
-def fetch_data_from_mongo():
-    """Fetch data from MongoDB."""
-    client = MongoClient('localhost', 27017)
-    db = client.IR_Ikea
-    reviews_collection = db.reviews
-    return list(reviews_collection.find())
+client = MongoClient("mongodb://localhost:27017/")
+db = client["IR_Ikea"]
+reviews_collection = db["reviews"]
+articles_collection = db["articles"]
 
-def create_index():
-    """Create an index using PyTerrier."""
-    reviews = fetch_data_from_mongo()
+def get_documents(collection):
+    docs = collection.find()
+    documents = []
+    for doc in docs:
+        docno = str(doc["_id"])
+        title = doc.get("articleTitle", "No title available")
+        text = doc.get("articleText", "No text available")
+        print(f"Document ID: {docno}, Title: {title}, Text: {text}")
+        documents.append({"docno": docno, "title": title, "text": text})
+    return pd.DataFrame(documents)
 
-    # Prepare documents with title and text as metadata
-    valid_docs = [
-        {"docno": str(idx), 
-         "text": item["articleText"], 
-         "title": item["articleTitle"], 
-         "metadata": {"title": item["articleTitle"], "text": item["articleText"]}}  # Adding metadata
-        for idx, item in enumerate(reviews) if item.get("articleText") and item.get("articleTitle")
-    ]
+reviews_df = get_documents(reviews_collection)
+articles_df = get_documents(articles_collection)
 
-    # Use IterDictIndexer to index the documents
-    indexer = pt.IterDictIndexer("./ikea_reviews_index")
-    
-    # Index the documents
-    index_ref = indexer.index(valid_docs)
-    print(f"Indexing complete! Index stored at: {index_ref}")
-    return index_ref
+all_docs_df = pd.concat([reviews_df, articles_df])
 
-if __name__ == "__main__":
-    create_index()
+index_path = "./ikea_index"
+indexer = pt.IterDictIndexer(index_path, meta={'docno': 24, 'title': 50, 'text': 1000})
+
+indexer.index(all_docs_df[['docno', 'text', 'title']].to_dict(orient="records"))
+
+print(f"Indexing complete! Index stored at: {index_path}")
