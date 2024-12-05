@@ -22,4 +22,4 @@ def search(query):
 
         print(f"Rank: {rank} | docno: {docno} | title: {title} | text: {text} | score: {score}")
 
-search("ikea")
+search("ikea bed")
