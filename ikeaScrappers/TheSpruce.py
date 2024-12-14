@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import json
 import logging
@@ -9,8 +8,8 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 from selenium.webdriver.support.wait import WebDriverWait
 
 from base_scrapper import BaseScraper, ArticleItem
-import requests
 from selenium import webdriver
+import time
 
 
 
@@ -74,39 +73,28 @@ class TheSpruceIkeaScrapper(BaseScraper):
                 done = True
 
     def get_article_details(self, article_link: str, article_title: str, url: str) -> ArticleItem | None:
-        try:
-            # Fetch the page content
-            response = requests.get(article_link)
-            response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
+        time.sleep(5)
+        driver.get(url)
 
-            # Parse the content with Beautiful Soup
-            soup = BeautifulSoup(response.content, 'html.parser')
+        grant_body = driver.find_element(By.CSS_SELECTOR, ".article--structured")
 
-            # Find the grant body element
-            grant_body = soup.select_one(".article--structured")
-
-            if grant_body is None:
-                print(f"no body {article_link}: {article_title}")
-                return None
-
-            text_content = []
-
-            # Find all <p>, <h1>, <h2>, <h3>, <h4>, <h5>, and <h6> tags within the grant_body element
-            tags = grant_body.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-
-            # Extract text from each tag and append it to the list
-            for tag in tags:
-                text_content.append(tag.get_text(strip=True))
-
-            # Join the text content into a single string separated by newlines
-            body_text = "\n".join(text_content)
-
-            return ArticleItem(self.source, article_link, article_title, body_text)
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching {article_link}: {e}")
+        if grant_body is None:
+            print(f"no body {article_link}:  {article_title} {url}...")
             return None
 
+        text_content = []
+
+        # Find all <p>, <h1>, <h2>, <h3>, <h4>, <h5>, and <h6> tags within the grant_body element
+        tags = grant_body.find_elements(By.CSS_SELECTOR, "p, h1, h2, h3, h4, h5, h6")
+
+        # Extract text from each tag and append it to the list
+        for tag in tags:
+            text_content.append(tag.text.strip())
+
+        # Join the text content into a single string separated by newlines
+        body_text = "\n".join(text_content)
+
+        return ArticleItem(self.source, article_link, article_title, body_text)
 
 if __name__ == '__main__':
     db_client = MongoClient('localhost', 27017)
