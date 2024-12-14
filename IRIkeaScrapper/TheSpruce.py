@@ -1,68 +1,111 @@
-from pymongo import MongoClient
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 import json
 import logging
 import re
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.webdriver.support.wait import WebDriverWait
+
 from base_scrapper import BaseScraper, ArticleItem
 import requests
+from selenium import webdriver
 
 
 
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")  # Open browser in full-screen mode
+driver = webdriver.Chrome(options=options)
 
-
-
+articleLinks = []
+articleItems = []
 class TheSpruceIkeaScrapper(BaseScraper):
     source = 'https://www.thespruce.com/search?q=ikea'
-
     def iterate_articles_list(self):
 
         page = 1
         done = False
+
+
+
         page_url = f"https://www.thespruce.com/search?q=ikea"
         while not done:
             print("------------------------")
             print(f"{self.scraper_name}: Scraping page {page}...")
 
-            response = requests.get(page_url)
-            page_html = response.text
-            soup = BeautifulSoup(page_html, "lxml")
-            reviews = soup.select(".card__content")
-            title_text = ""
-            body_text = ""
+            driver.get(page_url)
 
-            links = soup.select(".card-list__entry > a")
+            try:
+                # Wait for the reviews to load
+
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".card-list__entry"))
+                )
+            except TimeoutException:
+                print("No reviews found or timeout occurred.")
+                break
+
+
+            links = driver.find_elements(By.CSS_SELECTOR, ".card-list__entry > a")
+
+
             for link in links:
-                url = link["href"]
+
+
+                url = link.get_attribute("href")
                 if not url.startswith("https://www.thespruce.com/"):
                     continue
-                title = link.select_one(".card__title-text").strip()
-                yield ArticleItem(source_site=self.source, article_title=title, article_link=url, article_text="")
+                title = driver.find_element(By.CSS_SELECTOR, ".card__title-text").text.strip()
+                articleItems.append(ArticleItem(source_site=self.source, article_title=title, article_link=url, article_text=""))
+            articleLinks.append(links)
+            # next_page_link = driver.find_element(By.CSS_SELECTOR, ".pagination__item-link--next")
+            try:
+                # Wait for the next page link to be present
+                next_page_link = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".pagination__item-link--next"))
 
-            next_page_link = soup.select_one(".next_page_link > a")
-            if next_page_link is None or not links:
+                )
+                page_url = next_page_link.get_attribute("href")
+                page+=1
+
+            except (StaleElementReferenceException, TimeoutException):
+                print("Next page link does not exist or was not found in time.")
                 done = True
-            else:
-                page_url = next_page_link["href"]
 
     def get_article_details(self, article_link: str, article_title: str, url: str) -> ArticleItem | None:
+        try:
+            # Fetch the page content
+            response = requests.get(article_link)
+            response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
 
-        response = requests.get(url)
-        page_html = response.text
-        soup = BeautifulSoup(page_html, "lxml")
+            # Parse the content with Beautiful Soup
+            soup = BeautifulSoup(response.content, 'html.parser')
 
-        grant_body = soup.select_one(".article--structured")
+            # Find the grant body element
+            grant_body = soup.select_one(".article--structured")
 
-        if grant_body is None:
-            print(f"no body {article_link}:  {article_title} {url}...")
+            if grant_body is None:
+                print(f"no body {article_link}: {article_title}")
+                return None
+
+            text_content = []
+
+            # Find all <p>, <h1>, <h2>, <h3>, <h4>, <h5>, and <h6> tags within the grant_body element
+            tags = grant_body.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+
+            # Extract text from each tag and append it to the list
+            for tag in tags:
+                text_content.append(tag.get_text(strip=True))
+
+            # Join the text content into a single string separated by newlines
+            body_text = "\n".join(text_content)
+
+            return ArticleItem(self.source, article_link, article_title, body_text)
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching {article_link}: {e}")
             return None
-
-        text_content = []
-
-        for tag in grant_body.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            text_content.append(tag.get_text(strip=True))
-
-        body_text = "\n".join(text_content)
-        return ArticleItem(self.source, article_link, article_title, body_text)
 
 
 if __name__ == '__main__':
@@ -71,18 +114,13 @@ if __name__ == '__main__':
     scrapedArticles = db.articles2
 
     scraper = TheSpruceIkeaScrapper()
-
-    for result in scraper.iterate_articles_list():
-        scraped_article = scraper.get_article_details(result.article_link, result.article_title, result.article_link)
+    scraper.iterate_articles_list()
+    for articleItem in articleItems:
+        scraped_article = scraper.get_article_details(articleItem.article_link, articleItem.article_title, articleItem.article_link)
         if scraped_article is None:
             continue
         print(f"Scraped article {scraped_article.article_title} from url {scraped_article.article_link}")
         print("Body text:", json.dumps(scraped_article.article_text)[:100], "...")
-        # existing_document = scrapedArticles.find_one({"articleLink": scraped_article.to_dict()["articleLink"]})
-        #
-        # if existing_document:
-        #     print("Document with the specified field value already exists. Skipping insert.")
-        #     continue
-        # Insert the document if no match is found
         scrapedArticles.insert_one(scraped_article.to_dict())
+    driver.quit()
 
