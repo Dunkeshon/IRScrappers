@@ -14,6 +14,6 @@ processed_df = pd.DataFrame(list(processed_collection.find()))
 index_path = "./ikea_index"
 indexer = pt.IterDictIndexer(index_path, meta={'docno': 24, 'title': 50, 'text': 1000})
 
-indexer.index(processed_df[['docno', 'text', 'title']].to_dict(orient="records"))
+indexer.index(processed_df[['docno', 'title', 'text', 'raw_title', 'raw_text']].to_dict(orient="records"))
 
 print(f"Indexing complete! Index stored at: {index_path}")
