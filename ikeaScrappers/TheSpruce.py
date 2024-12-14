@@ -55,7 +55,7 @@ class TheSpruceIkeaScrapper(BaseScraper):
                 url = link.get_attribute("href")
                 if not url.startswith("https://www.thespruce.com/"):
                     continue
-                title = driver.find_element(By.CSS_SELECTOR, ".card__title-text").text.strip()
+                title = link.find_element(By.CSS_SELECTOR, ".card__title-text").text.strip()
                 articleItems.append(ArticleItem(source_site=self.source, article_title=title, article_link=url, article_text=""))
             articleLinks.append(links)
             # next_page_link = driver.find_element(By.CSS_SELECTOR, ".pagination__item-link--next")
@@ -73,28 +73,30 @@ class TheSpruceIkeaScrapper(BaseScraper):
                 done = True
 
     def get_article_details(self, article_link: str, article_title: str, url: str) -> ArticleItem | None:
-        time.sleep(5)
+
         driver.get(url)
+        time.sleep(2)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".main"))
+        )
 
-        grant_body = driver.find_element(By.CSS_SELECTOR, ".article--structured")
+        main_element = driver.find_element(By.CSS_SELECTOR, ".main")
 
-        if grant_body is None:
-            print(f"no body {article_link}:  {article_title} {url}...")
-            return None
+        # Locate the prefooter element to exclude its text
+        prefooter_element = main_element.find_element(By.CSS_SELECTOR, ".prefooter")
 
-        text_content = []
+        # Get all text from the main element
+        main_text = main_element.text
 
-        # Find all <p>, <h1>, <h2>, <h3>, <h4>, <h5>, and <h6> tags within the grant_body element
-        tags = grant_body.find_elements(By.CSS_SELECTOR, "p, h1, h2, h3, h4, h5, h6")
+        # Get text from the prefooter element
+        prefooter_text = prefooter_element.text
 
-        # Extract text from each tag and append it to the list
-        for tag in tags:
-            text_content.append(tag.text.strip())
+        # Remove the prefooter text from the main text
+        final_text = main_text.replace(prefooter_text, "").strip()
 
-        # Join the text content into a single string separated by newlines
-        body_text = "\n".join(text_content)
 
-        return ArticleItem(self.source, article_link, article_title, body_text)
+        return ArticleItem(self.source, article_link, article_title, final_text)
 
 if __name__ == '__main__':
     db_client = MongoClient('localhost', 27017)
