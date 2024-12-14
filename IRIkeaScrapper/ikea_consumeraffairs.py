@@ -6,44 +6,57 @@ import re
 from base_scrapper import BaseScraper, ArticleItem
 import requests
 
+from selenium import webdriver
+
 logger = logging.getLogger(__name__)
 
 
 class IkeaTrustPilotScrapper(BaseScraper):
     source = 'https://www.consumeraffairs.com/furniture/ikea.html#scroll_to_reviews=true'
-
     def iterate_articles_list(self):
 
-        page = 12
+        page = 1
         done = False
-        while not done:
-            print("------------------------")
-            print(f"{self.scraper_name}: Scraping page {page}...")
 
-            page_url = f"https://www.consumeraffairs.com/furniture/ikea.html?page={page}#scroll_to_reviews=true"
-            response = requests.get(page_url)
-            page_html = response.text
-            soup = BeautifulSoup(page_html, "lxml")
-            reviews = soup.select(".js-rvw rvw")
-            title_text = ""
-            body_text = ""
-
-            for review in reviews:
-
-                p_elements = review.find_all('p')  # This includes nested <p> elements
-                if p_elements:
-                    body_text = " ".join([p.get_text(strip=True) for p in p_elements])
-                    # Extract the first sentence from body_text
-                    title_text = re.split(r'\. ', body_text, 1)[0] + "."
+        page_url = f"https://www.consumeraffairs.com/furniture/ikea.html?page={page}"
+        driver_path = 'D:/chromedriver-win64/chromedriver'
+        driver = webdriver.Chrome(driver_path)
+        driver.get(page_url)
 
 
-                yield ArticleItem(source_site=self.source, article_title=title_text, article_link=page_url,
-                                  article_text=body_text)
-
-            next_page_link = soup.select_one(".js-pager-next")
-            if next_page_link is None or not reviews:
-                done = True
-            page += 1
+        # while not done:
+        #     print("------------------------")
+        #     print(f"{self.scraper_name}: Scraping page {page}...")
+        #
+        #
+        #
+        #
+        #
+        #     params = {"js_render": "true", "json_response": "true"}
+        #     response = self.client.get(page_url, params=params)
+        #
+        #     page_html = response.text
+        #     soup = BeautifulSoup(page_html, "lxml")
+        #     reviews = soup.select(".js-rvw rvw")
+        #     title_text = ""
+        #     body_text = ""
+        #
+        #     for review in reviews:
+        #
+        #         p_elements = review.find_all('p')  # This includes nested <p> elements
+        #         if p_elements:
+        #             body_text = " ".join([p.get_text(strip=True) for p in p_elements])
+        #             # Extract the first sentence from body_text
+        #             title_text = re.split(r'\. ', body_text, 1)[0] + "."
+        #
+        #
+        #         yield ArticleItem(source_site=self.source, article_title=title_text, article_link=page_url,
+        #                           article_text=body_text)
+        #
+        #     next_page_link = soup.select_one(".js-pager-next")
+        #     if next_page_link is None or not reviews:
+        #         done = True
+        #     page += 1
 
     def get_article_details(self, article_link: str, article_title: str, url: str) -> ArticleItem | None:
         return None
