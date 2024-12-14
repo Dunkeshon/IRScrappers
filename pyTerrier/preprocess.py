@@ -6,11 +6,13 @@ client = MongoClient("mongodb://localhost:27017/")
 db = client["IR_Ikea"]
 reviews_collection = db["reviews"]
 articles_collection = db["articles"]
+articles2_collection = db["articles2"]
 
 reviews_df = get_documents(reviews_collection)
 articles_df = get_documents(articles_collection)
+articles2_df = get_documents(articles2_collection)
 
-df = pd.concat([reviews_df, articles_df])
+df = pd.concat([reviews_df, articles_df, articles2_df])
 
 print("Preprocessing title and text")
 df = preprocess_data(df)
