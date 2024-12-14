@@ -12,7 +12,7 @@ processed_collection = db["processed_documents"]
 processed_df = pd.DataFrame(list(processed_collection.find()))
 
 index_path = "./ikea_index"
-indexer = pt.IterDictIndexer(index_path, meta={'docno': 24, 'title': 50, 'text': 1000})
+indexer = pt.IterDictIndexer(index_path, meta={'docno': 24, 'title': 50, 'text': 5000, 'raw_title': 100, 'raw_text': 5000})
 
 indexer.index(processed_df[['docno', 'title', 'text', 'raw_title', 'raw_text']].to_dict(orient="records"))
 
