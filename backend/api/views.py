@@ -10,7 +10,7 @@ if not pt.java.started():
 index_path = os.path.join(settings.BASE_DIR, "..", "pyTerrier", "ikea_index")
 index = pt.IndexFactory.of(index_path)
 
-retriever = pt.BatchRetrieve(index, num_results=5, metadata=["docno", "title", "text", "raw_title", "raw_text"])
+retriever = pt.BatchRetrieve(index, metadata=["docno", "title", "text", "raw_title", "raw_text"])
 
 @api_view(['GET'])
 def search_view(request):
