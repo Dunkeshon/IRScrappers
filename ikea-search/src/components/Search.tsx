@@ -17,6 +17,7 @@ const Search: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [tabCounts, setTabCounts] = useState({ all: 0, articles: 0, reviews: 0 });
   const [activeTab, setActiveTab] = useState<"all" | "articles" | "reviews">("all");
 
   const resultsPerPage = 5;
@@ -39,6 +40,7 @@ const Search: React.FC = () => {
       });
       setResults(response.data);
       setCurrentPage(1);
+      calculateTabCounts(response.data);
     } catch (err) {
       setError("Failed to fetch search results.");
     } finally {
@@ -70,13 +72,25 @@ const Search: React.FC = () => {
       if (response.data) {
         setResults(response.data);
         setFeedback({});
+        calculateTabCounts(response.data); // Recalculate tab counts after feedback
       }
     } catch (err) {
       console.error("Failed to update results with feedback:", err);
     }
   };
 
-  // Filter results based on the active tab
+  const calculateTabCounts = (data: any[]) => {
+    const counts = { all: data.length, articles: 0, reviews: 0 };
+    data.forEach((result) => {
+      if (result.link?.includes("trustpilot")) {
+        counts.reviews++;
+      } else {
+        counts.articles++;
+      }
+    });
+    setTabCounts(counts);
+  };
+
   const filteredResults = results.filter((result) => {
     if (activeTab === "all") return true;
     if (activeTab === "articles") return !result.link?.includes("trustpilot");
@@ -96,6 +110,10 @@ const Search: React.FC = () => {
   const visiblePages = Array.from(
     { length: endPage - startPage + 1 },
     (_, index) => startPage + index
+  );
+
+  const sortedTabs = ["all", "articles", "reviews"].sort(
+    (a, b) => tabCounts[b] - tabCounts[a]
   );
 
   return (
@@ -120,7 +138,7 @@ const Search: React.FC = () => {
       {/* Tabs */}
       {hasSearched && !loading && (
         <div className="mt-6 flex justify-center space-x-6 border-b">
-          {["all", "articles", "reviews"].map((tab) => (
+          {sortedTabs.map((tab) => (
             <button
               key={tab}
               className={`pb-2 px-4 text-lg ${
@@ -130,10 +148,10 @@ const Search: React.FC = () => {
               }`}
               onClick={() => {
                 setActiveTab(tab as "all" | "articles" | "reviews");
-                setCurrentPage(1); // Reset to first page on tab switch
+                setCurrentPage(1);
               }}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tabCounts[tab]})
             </button>
           ))}
         </div>
@@ -167,7 +185,7 @@ const Search: React.FC = () => {
           <ul>
             {paginatedResults.map((result) => {
               const isTrustpilot = result.link?.includes("trustpilot");
-              const relevance = visualFeedback[result.docno]; // Use visualFeedback for styling
+              const relevance = visualFeedback[result.docno];
 
               return (
                 <li
