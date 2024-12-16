@@ -163,6 +163,10 @@ const Search: React.FC = () => {
   );
 
   return (
+    <>
+    <div
+        className={`background-image ${results.length > 0 ? "blur" : ""}`}
+      ></div>
     <div className="container mx-auto p-6 font-sans">
       {/* Title Section */}
       <div className="text-center mb-10">
@@ -259,12 +263,12 @@ const Search: React.FC = () => {
               return (
                 <li
                   key={result.docno}
-                  className={`p-4 border rounded mb-4 bg-white shadow transition-shadow duration-300 relative 
+                  className={`p-4 border rounded mb-4 bg-white shadow transition-shadow duration-200 relative 
                       ${relevance === "relevant"
                       ? "shadow-[0_0_12px_4px_#22c55e] hover:shadow-[0_0_12px_4px_#22c55e]"
                       : relevance === "irrelevant"
                         ? "shadow-[0_0_12px_4px_#ef4444] hover:shadow-[0_0_12px_4px_#ef4444]"
-                        : "hover:shadow-[0_0_12px_4px_#facc15] transition-shadow duration-300"
+                        : "hover:shadow-[0_0_12px_4px_#facc15] transition-shadow duration-200"
                     }`}
                 >
 
@@ -394,6 +398,7 @@ const Search: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
