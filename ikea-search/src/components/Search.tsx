@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import API from "../api/api";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import ikeaLogo from "../png-transparent-forniture-ikea-logo-orange-famous-logos-in-orange-icon-removebg-preview.png";
@@ -21,6 +21,7 @@ const Search: React.FC = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [tabCounts, setTabCounts] = useState({ all: 0, articles: 0, reviews: 0 });
   const [activeTab, setActiveTab] = useState<"all" | "articles" | "reviews">("all");
+  const [isResetting, setIsResetting] = useState(false);
 
   const resultsPerPage = 5;
   const pagesToShow = 10;
@@ -29,61 +30,75 @@ const Search: React.FC = () => {
 
   const updateUrlWithQuery = (query: string) => {
     const params = new URLSearchParams();
-    params.set("query", query);
-    window.history.replaceState({}, "", `?${params.toString()}`);
-  };
-
-  const handleSearch = async (e?: React.FormEvent, queryParam?: string) => {
-    if (e) e.preventDefault();
-    const searchQuery = queryParam || query;
-    if (!searchQuery.trim()) return;
-  
-    setLoading(true);
-    setError("");
-    setHasSearched(true);
-    setActiveTab("all");
-  
-    try {
-      updateUrlWithQuery(searchQuery);
-      setFeedback({});
-      setVisualFeedback({});
-      const response = await API.post("/search/", {
-        query: searchQuery,
-        feedback: undefined,
-      });
-      setResults(response.data);
-      setCurrentPage(1);
-      calculateTabCounts(response.data);
-    } catch (err) {
-      setError("Failed to fetch search results.");
-    } finally {
-      setLoading(false);
+    if (query) {
+      params.set("query", query);
+      window.history.replaceState({}, "", `?${params.toString()}`);
+    } else {
+      window.history.replaceState({}, "", "/");
     }
   };
-  
-  
+
+  const handleSearch = useCallback(
+    async (e?: React.FormEvent, queryParam?: string) => {
+      if (e) e.preventDefault();
+      const searchQuery = queryParam || query;
+      if (!searchQuery.trim()) return;
+
+      setLoading(true);
+      setError("");
+      setHasSearched(true);
+      setActiveTab("all");
+
+      try {
+        updateUrlWithQuery(searchQuery);
+        setFeedback({});
+        setVisualFeedback({});
+        const response = await API.post("/search/", {
+          query: searchQuery,
+          feedback: undefined,
+        });
+        setResults(response.data);
+        setCurrentPage(1);
+        calculateTabCounts(response.data);
+      } catch (err) {
+        setError("Failed to fetch search results.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query]
+  );
 
   useEffect(() => {
+    if (isResetting) return;
+
     const params = new URLSearchParams(location.search);
     const queryFromUrl = params.get("query");
-  
+
     if (queryFromUrl) {
       setQuery(queryFromUrl);
       handleSearch(undefined, queryFromUrl);
     }
-  }, [location.search]);
-  
-  
+  }, [location.search, handleSearch, isResetting]);
+
+  const resetPage = () => {
+    setIsResetting(true);
+    setQuery("");
+    setResults([]);
+    setHasSearched(false);
+    setActiveTab("all");
+    updateUrlWithQuery("");
+  };
+
+
 
   const toggleFeedback = async (docno: string, relevance: "relevant" | "irrelevant") => {
     const newFeedback = feedback[docno] === relevance ? undefined : relevance;
-  
     const updatedVisualFeedback = {
       ...visualFeedback,
       [docno]: newFeedback,
     };
     setVisualFeedback(updatedVisualFeedback);
-  
     const updatedFeedback = {
       ...feedback,
       [docno]: newFeedback,
@@ -92,14 +107,12 @@ const Search: React.FC = () => {
       delete updatedFeedback[docno];
     }
     setFeedback(updatedFeedback);
-  
     if (newFeedback !== undefined) {
       try {
         const response = await API.post("/search/", {
           query,
-          feedback: { [docno]: newFeedback }, // Send only the toggled item's feedback
+          feedback: { [docno]: newFeedback },
         });
-  
         if (response.data) {
           setResults(response.data);
           calculateTabCounts(response.data);
@@ -109,7 +122,6 @@ const Search: React.FC = () => {
       }
     }
   };
-  
 
 
 
@@ -156,12 +168,7 @@ const Search: React.FC = () => {
       <div className="text-center mb-10">
         <div
           className="flex flex-col items-center cursor-pointer"
-          onClick={() => {
-            setQuery("");
-            setResults([]);
-            setHasSearched(false);
-            setActiveTab("all");
-          }}
+          onClick={resetPage}
         >
           {/* Modern IKEA-inspired SVG */}
           <img
@@ -322,22 +329,17 @@ const Search: React.FC = () => {
                     <FaThumbsUp
                       onClick={() => toggleFeedback(result.docno, "relevant")}
                       className={`cursor-pointer text-2xl ${relevance === "relevant"
-                          ? "text-green-500 hover:text-green-500" // Green hover when relevant
-                          : "text-gray-400 hover:text-gray-500"  // Gray hover when not relevant
+                        ? "text-green-500 hover:text-green-500"
+                        : "text-gray-400 hover:text-gray-500"
                         }`}
                     />
                     <FaThumbsDown
                       onClick={() => toggleFeedback(result.docno, "irrelevant")}
                       className={`cursor-pointer text-2xl ${relevance === "irrelevant"
-                          ? "text-red-500 hover:text-red-500"  // Red hover when irrelevant
-                          : "text-gray-400 hover:text-gray-500" // Gray hover when not irrelevant
+                        ? "text-red-500 hover:text-red-500"
+                        : "text-gray-400 hover:text-gray-500"
                         }`}
                     />
-
-
-
-
-
                   </div>
                 </li>
               );
@@ -358,8 +360,8 @@ const Search: React.FC = () => {
                 setCurrentPage(currentPage - 1);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200"
-            >
+              className="w-24 px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200 text-center"
+              >
               Previous
             </button>
           )}
@@ -384,8 +386,8 @@ const Search: React.FC = () => {
                 setCurrentPage(currentPage + 1);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200"
-            >
+              className="w-24 px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200 text-center"
+              >
               Next
             </button>
           )}
