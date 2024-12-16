@@ -17,15 +17,18 @@ const Search: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "articles" | "reviews">("all");
 
   const resultsPerPage = 5;
   const pagesToShow = 10;
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!query.trim()) return;
     setLoading(true);
     setError("");
     setHasSearched(true);
+    setActiveTab("all"); // Reset to "All" tab on new search
 
     try {
       setFeedback({});
@@ -73,12 +76,20 @@ const Search: React.FC = () => {
     }
   };
 
-  const paginatedResults = results.slice(
+  // Filter results based on the active tab
+  const filteredResults = results.filter((result) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "articles") return !result.link?.includes("trustpilot");
+    if (activeTab === "reviews") return result.link?.includes("trustpilot");
+    return false;
+  });
+
+  const paginatedResults = filteredResults.slice(
     (currentPage - 1) * resultsPerPage,
     currentPage * resultsPerPage
   );
 
-  const totalPages = Math.ceil(results.length / resultsPerPage);
+  const totalPages = Math.ceil(filteredResults.length / resultsPerPage);
   const half = Math.floor(pagesToShow / 2);
   const startPage = Math.max(1, currentPage - half);
   const endPage = Math.min(totalPages, startPage + pagesToShow - 1);
@@ -105,6 +116,28 @@ const Search: React.FC = () => {
           Search
         </button>
       </form>
+
+      {/* Tabs */}
+      {hasSearched && !loading && (
+        <div className="mt-6 flex justify-center space-x-6 border-b">
+          {["all", "articles", "reviews"].map((tab) => (
+            <button
+              key={tab}
+              className={`pb-2 px-4 text-lg ${
+                activeTab === tab
+                  ? "text-blue-500 border-b-2 border-blue-500"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              onClick={() => {
+                setActiveTab(tab as "all" | "articles" | "reviews");
+                setCurrentPage(1); // Reset to first page on tab switch
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Loading Spinner */}
       {loading && !results.length && (
@@ -195,26 +228,26 @@ const Search: React.FC = () => {
                     </>
                   )}
 
-                  {/* Relevance Score */}
                   <p className="text-sm text-gray-500 mt-2">
                     Relevance Score: {result.score?.toFixed(2)}
                   </p>
 
-                  {/* Relevance Feedback (Thumbs) */}
                   <div className="flex space-x-4 mt-4">
                     <FaThumbsUp
                       onClick={() => toggleFeedback(result.docno, "relevant")}
-                      className={`cursor-pointer text-xl ${relevance === "relevant"
-                        ? "text-green-500"
-                        : "text-gray-400 hover:text-green-500"
-                        }`}
+                      className={`cursor-pointer text-xl ${
+                        relevance === "relevant"
+                          ? "text-green-500"
+                          : "text-gray-400 hover:text-green-500"
+                      }`}
                     />
                     <FaThumbsDown
                       onClick={() => toggleFeedback(result.docno, "irrelevant")}
-                      className={`cursor-pointer text-xl ${relevance === "irrelevant"
-                        ? "text-red-500"
-                        : "text-gray-400 hover:text-red-500"
-                        }`}
+                      className={`cursor-pointer text-xl ${
+                        relevance === "irrelevant"
+                          ? "text-red-500"
+                          : "text-gray-400 hover:text-red-500"
+                      }`}
                     />
                   </div>
                 </li>
@@ -222,15 +255,14 @@ const Search: React.FC = () => {
             })}
           </ul>
         )}
-        {!loading && hasSearched && results.length === 0 && (
-          <p className="mt-4 text-gray-500">No results found.</p>
+        {!loading && hasSearched && filteredResults.length === 0 && (
+          <p className="mt-4 text-gray-500">No results found for this tab.</p>
         )}
       </div>
 
       {/* Pagination */}
-      {!loading && results.length > 0 && (
+      {!loading && filteredResults.length > 0 && (
         <div className="mt-6 flex justify-center space-x-2 items-center">
-          {/* Previous */}
           {currentPage > 1 && (
             <button
               onClick={() => {
@@ -242,8 +274,6 @@ const Search: React.FC = () => {
               Previous
             </button>
           )}
-
-          {/* Pages */}
           {visiblePages.map((page) => (
             <button
               key={page}
@@ -257,8 +287,6 @@ const Search: React.FC = () => {
               {page}
             </button>
           ))}
-
-          {/* Next */}
           {currentPage < totalPages && (
             <button
               onClick={() => {

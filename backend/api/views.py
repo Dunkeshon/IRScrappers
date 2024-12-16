@@ -12,7 +12,7 @@ if not pt.started():
 # Define the PyTerrier index path
 index_path = os.path.join(settings.BASE_DIR, "..", "pyTerrier", "ikea_index")
 index = pt.IndexFactory.of(index_path)
-retriever = pt.BatchRetrieve(index, num_results=10, metadata=["docno", "title", "text", "raw_title", "raw_text", "link"])
+retriever = pt.BatchRetrieve(index, num_results=30, metadata=["docno", "title", "text", "raw_title", "raw_text", "link"])
 
 # Global dictionaries to persist feedback and adjusted scores
 feedback_store = {}
