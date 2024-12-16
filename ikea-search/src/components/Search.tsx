@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import API from "../api/api.ts";
+import API from "../api/api";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import ikeaLogo from "../png-transparent-forniture-ikea-logo-orange-famous-logos-in-orange-icon-removebg-preview.png";
 
@@ -37,7 +37,7 @@ const Search: React.FC = () => {
       setVisualFeedback({});
       const response = await API.post("/search/", {
         query,
-        feedback: Object.keys(feedback).length > 0 ? feedback : undefined,
+        feedback: undefined,
       });
       setResults(response.data);
       setCurrentPage(1);
@@ -51,34 +51,41 @@ const Search: React.FC = () => {
 
   const toggleFeedback = async (docno: string, relevance: "relevant" | "irrelevant") => {
     const newFeedback = feedback[docno] === relevance ? undefined : relevance;
-
+  
     const updatedVisualFeedback = {
       ...visualFeedback,
-      [docno]: visualFeedback[docno] === relevance ? undefined : relevance,
+      [docno]: newFeedback,
     };
     setVisualFeedback(updatedVisualFeedback);
-
+  
     const updatedFeedback = {
       ...feedback,
       [docno]: newFeedback,
     };
+    if (newFeedback === undefined) {
+      delete updatedFeedback[docno];
+    }
     setFeedback(updatedFeedback);
-
-    try {
-      const response = await API.post("/search/", {
-        query,
-        feedback: updatedFeedback,
-      });
-
-      if (response.data) {
-        setResults(response.data);
-        setFeedback({});
-        calculateTabCounts(response.data);
+  
+    if (newFeedback !== undefined) {
+      try {
+        const response = await API.post("/search/", {
+          query,
+          feedback: { [docno]: newFeedback }, // Send only the toggled item's feedback
+        });
+  
+        if (response.data) {
+          setResults(response.data);
+          calculateTabCounts(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to update results with feedback:", err);
       }
-    } catch (err) {
-      console.error("Failed to update results with feedback:", err);
     }
   };
+  
+
+
 
   const calculateTabCounts = (data: any[]) => {
     const counts = { all: data.length, articles: 0, reviews: 0 };
@@ -114,7 +121,7 @@ const Search: React.FC = () => {
   );
 
   const sortedTabs = ["all", "articles", "reviews"].sort(
-    (a, b) => tabCounts[b] - tabCounts[a]
+    (a, b) => tabCounts[b as keyof typeof tabCounts] - tabCounts[a as keyof typeof tabCounts]
   );
 
   return (
@@ -180,7 +187,7 @@ const Search: React.FC = () => {
                 setCurrentPage(1);
               }}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tabCounts[tab]})
+              {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tabCounts[tab as keyof typeof tabCounts]})
             </button>
           ))}
         </div>
@@ -219,11 +226,15 @@ const Search: React.FC = () => {
               return (
                 <li
                   key={result.docno}
-                  className={`p-4 border rounded mb-4 bg-white hover:shadow-[0_0_12px_4px_theme('colors.yellow.500')] shadow hover:shadow-lg transition-shadow duration-300 relative
-                     ${relevance === "relevant" ? "shadow-[0_0_12px_4px_theme('colors.green.500')] hover:shadow-[0_0_12px_4px_theme('colors.green.500')] transition-shadow duration-300" 
-                      : relevance === "irrelevant" ? "shadow-[0_0_12px_4px_theme('colors.red.500')] hover:shadow-[0_0_12px_4px_theme('colors.red.500')] transition-shadow duration-300" : ""
+                  className={`p-4 border rounded mb-4 bg-white shadow transition-shadow duration-300 relative 
+                      ${relevance === "relevant"
+                      ? "shadow-[0_0_12px_4px_#22c55e] hover:shadow-[0_0_12px_4px_#22c55e]"
+                      : relevance === "irrelevant"
+                        ? "shadow-[0_0_12px_4px_#ef4444] hover:shadow-[0_0_12px_4px_#ef4444]"
+                        : "hover:shadow-[0_0_12px_4px_#facc15] transition-shadow duration-300"
                     }`}
                 >
+
                   {/* Content */}
                   {isTrustpilot ? (
                     <>
@@ -285,17 +296,22 @@ const Search: React.FC = () => {
                     <FaThumbsUp
                       onClick={() => toggleFeedback(result.docno, "relevant")}
                       className={`cursor-pointer text-xl ${relevance === "relevant"
-                        ? "text-green-500"
-                        : "text-gray-400 hover:text-green-500"
+                          ? "text-green-500 hover:text-green-500" // Green hover when relevant
+                          : "text-gray-400 hover:text-gray-500"  // Gray hover when not relevant
                         }`}
                     />
                     <FaThumbsDown
                       onClick={() => toggleFeedback(result.docno, "irrelevant")}
                       className={`cursor-pointer text-xl ${relevance === "irrelevant"
-                        ? "text-red-500"
-                        : "text-gray-400 hover:text-red-500"
+                          ? "text-red-500 hover:text-red-500"  // Red hover when irrelevant
+                          : "text-gray-400 hover:text-gray-500" // Gray hover when not irrelevant
                         }`}
                     />
+
+
+
+
+
                   </div>
                 </li>
               );
