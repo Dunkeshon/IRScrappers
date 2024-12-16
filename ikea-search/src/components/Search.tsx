@@ -11,8 +11,7 @@ const highlightQuery = (text: string, query: string) => {
 const Search: React.FC = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
-  const [feedback, setFeedback] = useState<Record<string, "relevant" | "irrelevant">>({});
-  const [updatedScores, setUpdatedScores] = useState<Record<string, number>>({});
+  const [feedback, setFeedback] = useState<Record<string, "relevant" | "irrelevant" | undefined>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,40 +25,43 @@ const Search: React.FC = () => {
     setLoading(true);
     setError("");
     setHasSearched(true);
+
     try {
-      const response = await API.get("/search/", { params: { query } });
+      const response = await API.post("/search/", {
+        query,
+        feedback: Object.keys(feedback).length > 0 ? feedback : undefined,
+      });
       setResults(response.data);
       setCurrentPage(1);
-      setFeedback({});
-      setUpdatedScores(() =>
-        response.data.reduce((acc: Record<string, number>, result: any) => {
-          acc[result.docno] = result.score;
-          return acc;
-        }, {})
-      );
     } catch (err) {
       setError("Failed to fetch search results.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleFeedback = (docno: string, relevance: "relevant" | "irrelevant") => {
-    setFeedback((prev) => ({ ...prev, [docno]: relevance }));
+  const toggleFeedback = (docno: string, relevance: "relevant" | "irrelevant") => {
+    const newFeedback = feedback[docno] === relevance ? undefined : relevance;
 
-    setUpdatedScores((prev) => ({
+    setFeedback((prev) => ({
       ...prev,
-      [docno]: relevance === "relevant" ? prev[docno] + 1 : prev[docno] - 1,
+      [docno]: newFeedback, // Update feedback state
     }));
+
+    // Reorder results locally based on feedback
+    const relevant = results.filter(
+      (r) => (feedback[r.docno] === "relevant") || (docno === r.docno && newFeedback === "relevant")
+    );
+    const irrelevant = results.filter(
+      (r) => (feedback[r.docno] === "irrelevant") || (docno === r.docno && newFeedback === "irrelevant")
+    );    
+    const neutral = results.filter((r) => !feedback[r.docno] && docno !== r.docno);
+
+    setResults([...relevant, ...neutral, ...irrelevant]);
   };
 
-  const getReorderedResults = () => {
-    const relevantResults = results.filter((r) => feedback[r.docno] === "relevant");
-    const irrelevantResults = results.filter((r) => feedback[r.docno] === "irrelevant");
-    const neutralResults = results.filter((r) => !feedback[r.docno]);
-    return [...relevantResults, ...neutralResults, ...irrelevantResults];
-  };
 
-  const paginatedResults = getReorderedResults().slice(
+  const paginatedResults = results.slice(
     (currentPage - 1) * resultsPerPage,
     currentPage * resultsPerPage
   );
@@ -124,10 +126,9 @@ const Search: React.FC = () => {
 
               return (
                 <li
-                  key={`${result.docno}-${Math.random()}`}
-                  className={`p-4 border rounded mb-4 bg-white shadow hover:shadow-lg transition-shadow duration-200 relative ${
-                    relevance === "relevant" ? "border-green-500" : relevance === "irrelevant" ? "border-red-500" : ""
-                  }`}
+                  key={result.docno}
+                  className={`p-4 border rounded mb-4 bg-white shadow hover:shadow-lg transition-shadow duration-200 relative ${relevance === "relevant" ? "border-green-500" : relevance === "irrelevant" ? "border-red-500" : ""
+                    }`}
                 >
                   {/* Trustpilot Reviews */}
                   {isTrustpilot ? (
@@ -184,26 +185,24 @@ const Search: React.FC = () => {
 
                   {/* Relevance Score */}
                   <p className="text-sm text-gray-500 mt-2">
-                    Relevance Score: {updatedScores[result.docno]?.toFixed(2)}
+                    Relevance Score: {result.score?.toFixed(2)}
                   </p>
 
                   {/* Relevance Feedback (Thumbs) */}
                   <div className="flex space-x-4 mt-4">
                     <FaThumbsUp
-                      onClick={() => handleFeedback(result.docno, "relevant")}
-                      className={`cursor-pointer text-xl ${
-                        feedback[result.docno] === "relevant"
-                          ? "text-green-500"
-                          : "text-gray-400 hover:text-green-500"
-                      }`}
+                      onClick={() => toggleFeedback(result.docno, "relevant")}
+                      className={`cursor-pointer text-xl ${relevance === "relevant"
+                        ? "text-green-500"
+                        : "text-gray-400 hover:text-green-500"
+                        }`}
                     />
                     <FaThumbsDown
-                      onClick={() => handleFeedback(result.docno, "irrelevant")}
-                      className={`cursor-pointer text-xl ${
-                        feedback[result.docno] === "irrelevant"
-                          ? "text-red-500"
-                          : "text-gray-400 hover:text-red-500"
-                      }`}
+                      onClick={() => toggleFeedback(result.docno, "irrelevant")}
+                      className={`cursor-pointer text-xl ${relevance === "irrelevant"
+                        ? "text-red-500"
+                        : "text-gray-400 hover:text-red-500"
+                        }`}
                     />
                   </div>
                 </li>
@@ -240,9 +239,8 @@ const Search: React.FC = () => {
                 setCurrentPage(page);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className={`px-4 py-2 rounded ${
-                currentPage === page ? "bg-blue-500 text-white" : "bg-gray-300"
-              }`}
+              className={`px-4 py-2 rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-300"
+                }`}
             >
               {page}
             </button>
