@@ -12,6 +12,7 @@ const Search: React.FC = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [feedback, setFeedback] = useState<Record<string, "relevant" | "irrelevant" | undefined>>({});
+  const [visualFeedback, setVisualFeedback] = useState<Record<string, "relevant" | "irrelevant" | undefined>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,6 +29,7 @@ const Search: React.FC = () => {
 
     try {
       setFeedback({});
+      setVisualFeedback({});
       const response = await API.post("/search/", {
         query,
         feedback: Object.keys(feedback).length > 0 ? feedback : undefined,
@@ -44,7 +46,12 @@ const Search: React.FC = () => {
   const toggleFeedback = async (docno: string, relevance: "relevant" | "irrelevant") => {
     const newFeedback = feedback[docno] === relevance ? undefined : relevance;
 
-    // Update feedback state locally
+    const updatedVisualFeedback = {
+      ...visualFeedback,
+      [docno]: visualFeedback[docno] === relevance ? undefined : relevance,
+    };
+    setVisualFeedback(updatedVisualFeedback);
+
     const updatedFeedback = {
       ...feedback,
       [docno]: newFeedback,
@@ -52,22 +59,19 @@ const Search: React.FC = () => {
     setFeedback(updatedFeedback);
 
     try {
-      // Send updated feedback to backend
       const response = await API.post("/search/", {
         query,
-        feedback: updatedFeedback, // Include updated feedback
+        feedback: updatedFeedback,
       });
 
-      // Update results with the backend response
       if (response.data) {
-        setResults(response.data); // Replace results with backend-validated reordering
+        setResults(response.data);
         setFeedback({});
       }
     } catch (err) {
       console.error("Failed to update results with feedback:", err);
     }
   };
-
 
   const paginatedResults = results.slice(
     (currentPage - 1) * resultsPerPage,
@@ -130,7 +134,7 @@ const Search: React.FC = () => {
           <ul>
             {paginatedResults.map((result) => {
               const isTrustpilot = result.link?.includes("trustpilot");
-              const relevance = feedback[result.docno];
+              const relevance = visualFeedback[result.docno]; // Use visualFeedback for styling
 
               return (
                 <li
