@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import API from "../api/api";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import ikeaLogo from "../png-transparent-forniture-ikea-logo-orange-famous-logos-in-orange-icon-removebg-preview.png";
+import { useLocation } from "react-router-dom";
 
 const highlightQuery = (text: string, query: string) => {
   if (!query) return text;
@@ -24,19 +25,30 @@ const Search: React.FC = () => {
   const resultsPerPage = 5;
   const pagesToShow = 10;
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const location = useLocation();
+
+  const updateUrlWithQuery = (query: string) => {
+    const params = new URLSearchParams();
+    params.set("query", query);
+    window.history.replaceState({}, "", `?${params.toString()}`);
+  };
+
+  const handleSearch = async (e?: React.FormEvent, queryParam?: string) => {
+    if (e) e.preventDefault();
+    const searchQuery = queryParam || query;
+    if (!searchQuery.trim()) return;
+  
     setLoading(true);
     setError("");
     setHasSearched(true);
     setActiveTab("all");
-
+  
     try {
+      updateUrlWithQuery(searchQuery);
       setFeedback({});
       setVisualFeedback({});
       const response = await API.post("/search/", {
-        query,
+        query: searchQuery,
         feedback: undefined,
       });
       setResults(response.data);
@@ -48,6 +60,20 @@ const Search: React.FC = () => {
       setLoading(false);
     }
   };
+  
+  
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const queryFromUrl = params.get("query");
+  
+    if (queryFromUrl) {
+      setQuery(queryFromUrl);
+      handleSearch(undefined, queryFromUrl);
+    }
+  }, [location.search]);
+  
+  
 
   const toggleFeedback = async (docno: string, relevance: "relevant" | "irrelevant") => {
     const newFeedback = feedback[docno] === relevance ? undefined : relevance;
@@ -255,7 +281,7 @@ const Search: React.FC = () => {
                           href="https://www.trustpilot.com/review/www.ikea.com"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-500 italic hover:underline pr-2"
+                          className="text-lg text-blue-500 italic hover:underline pr-2"
                         >
                           Trustpilot Review
                         </a>
@@ -295,14 +321,14 @@ const Search: React.FC = () => {
                   <div className="flex space-x-4 mt-4">
                     <FaThumbsUp
                       onClick={() => toggleFeedback(result.docno, "relevant")}
-                      className={`cursor-pointer text-xl ${relevance === "relevant"
+                      className={`cursor-pointer text-2xl ${relevance === "relevant"
                           ? "text-green-500 hover:text-green-500" // Green hover when relevant
                           : "text-gray-400 hover:text-gray-500"  // Gray hover when not relevant
                         }`}
                     />
                     <FaThumbsDown
                       onClick={() => toggleFeedback(result.docno, "irrelevant")}
-                      className={`cursor-pointer text-xl ${relevance === "irrelevant"
+                      className={`cursor-pointer text-2xl ${relevance === "irrelevant"
                           ? "text-red-500 hover:text-red-500"  // Red hover when irrelevant
                           : "text-gray-400 hover:text-gray-500" // Gray hover when not irrelevant
                         }`}
