@@ -41,24 +41,31 @@ const Search: React.FC = () => {
     }
   };
 
-  const toggleFeedback = (docno: string, relevance: "relevant" | "irrelevant") => {
+  const toggleFeedback = async (docno: string, relevance: "relevant" | "irrelevant") => {
     const newFeedback = feedback[docno] === relevance ? undefined : relevance;
 
-    setFeedback((prev) => ({
-      ...prev,
-      [docno]: newFeedback, // Update feedback state
-    }));
+    // Update feedback state locally
+    const updatedFeedback = {
+      ...feedback,
+      [docno]: newFeedback,
+    };
+    setFeedback(updatedFeedback);
 
-    // Reorder results locally based on feedback
-    const relevant = results.filter(
-      (r) => (feedback[r.docno] === "relevant") || (docno === r.docno && newFeedback === "relevant")
-    );
-    const irrelevant = results.filter(
-      (r) => (feedback[r.docno] === "irrelevant") || (docno === r.docno && newFeedback === "irrelevant")
-    );    
-    const neutral = results.filter((r) => !feedback[r.docno] && docno !== r.docno);
+    try {
+      // Send updated feedback to backend
+      const response = await API.post("/search/", {
+        query,
+        feedback: updatedFeedback, // Include updated feedback
+      });
 
-    setResults([...relevant, ...neutral, ...irrelevant]);
+      // Update results with the backend response
+      if (response.data) {
+        setResults(response.data); // Replace results with backend-validated reordering
+        setFeedback({});
+      }
+    } catch (err) {
+      console.error("Failed to update results with feedback:", err);
+    }
   };
 
 

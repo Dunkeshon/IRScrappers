@@ -37,31 +37,24 @@ def search_view(request):
         # Step 3: Use existing adjusted scores or initialize with current results
         for idx, row in results.iterrows():
             docno = row['docno']
+            # Retain existing adjusted score or initialize to the current score
             if docno not in adjusted_scores[query]:
-                adjusted_scores[query][docno] = row['score']  # Initialize with the original score
+                adjusted_scores[query][docno] = row['score']
             results.at[idx, 'score'] = adjusted_scores[query][docno]
 
-        # Step 4: Apply feedback if provided
-        if feedback:
-            # Update feedback store
-            if query not in feedback_store:
-                feedback_store[query] = {}
-            feedback_store[query].update(feedback)
+        # Step 4: Apply feedback from the current request
+        for idx, row in results.iterrows():
+            docno = row['docno']
+            current_score = adjusted_scores[query][docno]
 
-            # Adjust scores based on new feedback
-            for idx, row in results.iterrows():
-                docno = row['docno']
-                current_score = adjusted_scores[query][docno]
-
-                if docno in feedback_store[query]:
-                    if feedback_store[query][docno] == "relevant":
-                        current_score *= 1.5  # Incremental boost
-                    elif feedback_store[query][docno] == "irrelevant":
-                        current_score *= 0.5  # Incremental penalty
-
-                    # Persist the adjusted score
-                    adjusted_scores[query][docno] = current_score
-                    results.at[idx, 'score'] = current_score
+            # Adjust score only if feedback is provided for this document
+            if docno in feedback:
+                if feedback[docno] == "relevant":
+                    current_score *= 1.5  # Incremental boost
+                elif feedback[docno] == "irrelevant":
+                    current_score *= 0.5  # Incremental penalty
+                adjusted_scores[query][docno] = current_score  # Persist adjusted score
+                results.at[idx, 'score'] = current_score
 
         # Step 5: Re-sort by updated scores
         results = results.sort_values(by="score", ascending=False)
