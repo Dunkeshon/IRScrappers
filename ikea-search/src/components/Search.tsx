@@ -219,7 +219,9 @@ const Search: React.FC = () => {
               return (
                 <li
                   key={result.docno}
-                  className={`p-4 border rounded mb-4 bg-white hover:shadow-[0_0_12px_4px_theme('colors.yellow.500')] shadow hover:shadow-lg transition-shadow duration-300 relative ${relevance === "relevant" ? "border-green-500" : relevance === "irrelevant" ? "border-red-500" : ""
+                  className={`p-4 border rounded mb-4 bg-white hover:shadow-[0_0_12px_4px_theme('colors.yellow.500')] shadow hover:shadow-lg transition-shadow duration-300 relative
+                     ${relevance === "relevant" ? "shadow-[0_0_12px_4px_theme('colors.green.500')] hover:shadow-[0_0_12px_4px_theme('colors.green.500')] transition-shadow duration-300" 
+                      : relevance === "irrelevant" ? "shadow-[0_0_12px_4px_theme('colors.red.500')] hover:shadow-[0_0_12px_4px_theme('colors.red.500')] transition-shadow duration-300" : ""
                     }`}
                 >
                   {/* Content */}
