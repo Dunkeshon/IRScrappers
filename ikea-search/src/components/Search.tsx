@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import API from "../api/api.ts";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+import ikeaLogo from "../png-transparent-forniture-ikea-logo-orange-famous-logos-in-orange-icon-removebg-preview.png";
 
 const highlightQuery = (text: string, query: string) => {
   if (!query) return text;
   const regex = new RegExp(`(${query})`, "gi");
-  return text.replace(regex, `<span class="font-bold">$1</span>`);
+  return text.replace(regex, `<span class="font-bold text-blue-700">$1</span>`);
 };
 
 const Search: React.FC = () => {
@@ -29,7 +30,7 @@ const Search: React.FC = () => {
     setLoading(true);
     setError("");
     setHasSearched(true);
-    setActiveTab("all"); // Reset to "All" tab on new search
+    setActiveTab("all");
 
     try {
       setFeedback({});
@@ -72,7 +73,7 @@ const Search: React.FC = () => {
       if (response.data) {
         setResults(response.data);
         setFeedback({});
-        calculateTabCounts(response.data); // Recalculate tab counts after feedback
+        calculateTabCounts(response.data);
       }
     } catch (err) {
       console.error("Failed to update results with feedback:", err);
@@ -117,18 +118,47 @@ const Search: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 font-sans">
+      {/* Title Section */}
+      <div className="text-center mb-10">
+        <div
+          className="flex flex-col items-center cursor-pointer"
+          onClick={() => {
+            setQuery("");
+            setResults([]);
+            setHasSearched(false);
+            setActiveTab("all");
+          }}
+        >
+          {/* Modern IKEA-inspired SVG */}
+          <img
+            src={ikeaLogo}
+            alt="IKEA Hacks Logo"
+            className="w-40 h-40"
+          />
+          {/* Title */}
+          <h1 className="text-5xl font-extrabold text-yellow-400 drop-shadow-lg">
+            IKEA Hacks
+          </h1>
+        </div>
+        {/* Subtext */}
+        <p className="text-lg text-gray-200 mt-2 max-w-xl mx-auto">
+          Search for smart IKEA ideas to upgrade and customize your space.
+        </p>
+      </div>
+
+
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="flex space-x-2">
+      <form onSubmit={handleSearch} className="flex space-x-2 justify-center">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search for IKEA hacks and reviews..."
-          className="border rounded px-4 py-2 w-full"
+          className="border rounded px-4 py-2 w-1/2 focus:ring-2 focus:ring-yellow-400 focus:outline-none"
         />
         <button
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          className="bg-yellow-500 text-white px-6 py-2 rounded hover:bg-yellow-600 transition-all duration-200"
           type="submit"
         >
           Search
@@ -141,11 +171,10 @@ const Search: React.FC = () => {
           {sortedTabs.map((tab) => (
             <button
               key={tab}
-              className={`pb-2 px-4 text-lg ${
-                activeTab === tab
-                  ? "text-blue-500 border-b-2 border-blue-500"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`pb-2 px-4 text-lg transition-all duration-200 ${activeTab === tab
+                ? "text-yellow-500 border-b-2 border-yellow-500"
+                : "text-white hover:text-yellow-500"
+                }`}
               onClick={() => {
                 setActiveTab(tab as "all" | "articles" | "reviews");
                 setCurrentPage(1);
@@ -190,10 +219,10 @@ const Search: React.FC = () => {
               return (
                 <li
                   key={result.docno}
-                  className={`p-4 border rounded mb-4 bg-white shadow hover:shadow-lg transition-shadow duration-200 relative ${relevance === "relevant" ? "border-green-500" : relevance === "irrelevant" ? "border-red-500" : ""
+                  className={`p-4 border rounded mb-4 bg-white hover:shadow-[0_0_12px_4px_theme('colors.yellow.500')] shadow hover:shadow-lg transition-shadow duration-300 relative ${relevance === "relevant" ? "border-green-500" : relevance === "irrelevant" ? "border-red-500" : ""
                     }`}
                 >
-                  {/* Trustpilot Reviews */}
+                  {/* Content */}
                   {isTrustpilot ? (
                     <>
                       <h3
@@ -253,19 +282,17 @@ const Search: React.FC = () => {
                   <div className="flex space-x-4 mt-4">
                     <FaThumbsUp
                       onClick={() => toggleFeedback(result.docno, "relevant")}
-                      className={`cursor-pointer text-xl ${
-                        relevance === "relevant"
-                          ? "text-green-500"
-                          : "text-gray-400 hover:text-green-500"
-                      }`}
+                      className={`cursor-pointer text-xl ${relevance === "relevant"
+                        ? "text-green-500"
+                        : "text-gray-400 hover:text-green-500"
+                        }`}
                     />
                     <FaThumbsDown
                       onClick={() => toggleFeedback(result.docno, "irrelevant")}
-                      className={`cursor-pointer text-xl ${
-                        relevance === "irrelevant"
-                          ? "text-red-500"
-                          : "text-gray-400 hover:text-red-500"
-                      }`}
+                      className={`cursor-pointer text-xl ${relevance === "irrelevant"
+                        ? "text-red-500"
+                        : "text-gray-400 hover:text-red-500"
+                        }`}
                     />
                   </div>
                 </li>
@@ -274,7 +301,7 @@ const Search: React.FC = () => {
           </ul>
         )}
         {!loading && hasSearched && filteredResults.length === 0 && (
-          <p className="mt-4 text-gray-500">No results found for this tab.</p>
+          <p className="mt-4 text-white flex justify-center">No results found for this tab.</p>
         )}
       </div>
 
@@ -287,7 +314,7 @@ const Search: React.FC = () => {
                 setCurrentPage(currentPage - 1);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="px-4 py-2 rounded bg-gray-300"
+              className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200"
             >
               Previous
             </button>
@@ -299,7 +326,9 @@ const Search: React.FC = () => {
                 setCurrentPage(page);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className={`px-4 py-2 rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-300"
+              className={`px-4 py-2 rounded ${currentPage === page
+                ? "bg-yellow-500 text-white"
+                : "bg-gray-300 hover:bg-gray-400"
                 }`}
             >
               {page}
@@ -311,7 +340,7 @@ const Search: React.FC = () => {
                 setCurrentPage(currentPage + 1);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="px-4 py-2 rounded bg-gray-300"
+              className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition-all duration-200"
             >
               Next
             </button>
