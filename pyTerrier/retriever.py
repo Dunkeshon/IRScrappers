@@ -6,7 +6,7 @@ if not pt.java.started():
 index_path = "./ikea_index"
 index = pt.IndexFactory.of(index_path)
 
-retriever = pt.BatchRetrieve(index, num_results=5, metadata=["docno", "title", "text", "raw_title", "raw_text"])
+retriever = pt.BatchRetrieve(index, num_results=5, metadata=["docno", "title", "text", "raw_title", "raw_text", "link"])
 
 def search(query):
     results = retriever.search(query)
@@ -16,10 +16,11 @@ def search(query):
         docno = row['docno']
         rank = row['rank']
         score = row['score']
+        link = row['link']
         
         raw_title = row.get('raw_title', 'No raw title available')
         raw_text = row.get('raw_text', 'No raw text available')
 
-        print(f"Rank: {rank} | docno: {docno} | raw_title: {raw_title} | raw_text: {raw_text} | score: {score}")
+        print(f"Rank: {rank} | docno: {docno} | raw_title: {raw_title} | raw_text: {raw_text} | score: {score} | link: {link}")
 
 search("ikea bed")
