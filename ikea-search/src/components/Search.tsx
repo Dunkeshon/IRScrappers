@@ -27,6 +27,7 @@ const Search: React.FC = () => {
     setHasSearched(true);
 
     try {
+      setFeedback({});
       const response = await API.post("/search/", {
         query,
         feedback: Object.keys(feedback).length > 0 ? feedback : undefined,
