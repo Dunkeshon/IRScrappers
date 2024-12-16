@@ -39,5 +39,6 @@ def get_documents(collection):
         docno = str(doc["_id"])
         title = doc.get("articleTitle", "No title available")
         text = doc.get("articleText", "No text available")
-        documents.append({"docno": docno, "title": title, "text": text})
+        link = doc.get("articleLink", "No link available")
+        documents.append({"docno": docno, "title": title, "text": text, "link": link})
     return pd.DataFrame(documents)
