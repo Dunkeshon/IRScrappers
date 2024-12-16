@@ -19,13 +19,14 @@ df = pd.concat([reviews_df, articles_df, articles2_df])
 
 # Preprocess data while keeping raw fields
 print("Preprocessing title and text")
-df['raw_title'] = df['title']  # Keep raw title
-df['raw_text'] = df['text']    # Keep raw text
+df['raw_title'] = df['title']
+df['raw_text'] = df['text']
+df['link'] = df['link']
 df['title'] = df['title'].apply(preprocess_text)
 df['text'] = df['text'].apply(preprocess_text)
 
 # Save preprocessed data with original fields into MongoDB
 processed_collection = db["processed_documents"]
-processed_documents = df[['docno', 'title', 'text', 'raw_title', 'raw_text']].to_dict(orient='records')
+processed_documents = df[['docno', 'title', 'text', 'raw_title', 'raw_text', 'link']].to_dict(orient='records')
 processed_collection.insert_many(processed_documents)
 print("Preprocessed data with original fields saved in MongoDB under 'processed_documents' collection")
