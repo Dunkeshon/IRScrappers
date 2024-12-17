@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback } from "react";
 import API from "../api/api";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
@@ -11,6 +12,7 @@ const highlightQuery = (text: string, query: string) => {
 };
 
 // FIX THE BUG WHEN AFTER RELOAD, I CANNOT CHANGE THE QUERY. IT DOES NOT LET ME CHANGE THE QUERY, IT KEEPS REVERTING ME BACK.
+// INCLUDE THE LOADING when we CHANGE QUERY
 
 const Search: React.FC = () => {
   const [query, setQuery] = useState("");
@@ -46,6 +48,7 @@ const Search: React.FC = () => {
       const searchQuery = queryParam || query;
       if (!searchQuery.trim()) return;
 
+      setResults([]);
       setLoading(true);
       setError("");
       setHasSearched(true);
@@ -71,17 +74,22 @@ const Search: React.FC = () => {
     [query]
   );
 
+  
+
+  
+
   useEffect(() => {
     if (isResetting) return;
 
     const params = new URLSearchParams(location.search);
     const queryFromUrl = params.get("query");
-
-    if (queryFromUrl) {
+  
+    // Only set query if it's from the URL and query state is empty
+    if (queryFromUrl && query === "") {
       setQuery(queryFromUrl);
       handleSearch(undefined, queryFromUrl);
     }
-  }, [location.search, handleSearch, isResetting]);
+  }, [location.search]);
 
   const resetPage = () => {
     setIsResetting(true);
