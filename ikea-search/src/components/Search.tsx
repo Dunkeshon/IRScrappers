@@ -10,6 +10,8 @@ const highlightQuery = (text: string, query: string) => {
   return text.replace(regex, `<span class="font-bold text-blue-700">$1</span>`);
 };
 
+// FIX THE BUG WHEN AFTER RELOAD, I CANNOT CHANGE THE QUERY. IT DOES NOT LET ME CHANGE THE QUERY, IT KEEPS REVERTING ME BACK.
+
 const Search: React.FC = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
